@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+fastembed
+numpy
+requests
+
+

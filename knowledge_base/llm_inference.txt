@@ -1,0 +1,20 @@
+LLM Inference Service Architecture
+
+The LLM inference system separates the API service from the inference worker service.
+
+The API service receives user inference requests through a FastAPI endpoint. Each request can be assigned a unique request identifier before being placed into a Redis queue.
+
+Redis provides a FIFO-style request queue between the API and inference workers. This allows requests to wait in the queue when inference workers are busy.
+
+Inference worker pods retrieve pending requests from Redis and process them using the LLM inference service.
+
+Ollama provides the interface for communicating with the Code Llama model. Code Llama performs the language-model inference and generates the requested response.
+
+Separating API pods from inference workers improves the architecture by allowing the API layer and inference layer to scale independently.
+
+In a Kubernetes deployment, HPA can be used for CPU-based scaling of API pods, while KEDA can use Redis queue length to scale inference worker pods.
+
+The overall service flow is:
+
+Client -> FastAPI API -> Redis -> Inference Worker -> Ollama -> Code Llama -> Result
+

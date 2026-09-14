@@ -1,0 +1,27 @@
+[
+  {
+    "id": 1,
+    "question": "Trace the complete flow of a user question through app.py, retrieval_service.py, retrieve.py, inference_service.py, and Ollama. Explain what each component does.",
+    "answer": "1. **app.py (FastAPI)**: This is the main entry point for the FastAPI application. It defines the root (\"/\") and \"/ask-services\" endpoints. The \"/ask\" endpoint triggers the retrieval and inference services to process the user's question.\n\n2. **/ask-services endpoint**: When this endpoint is hit, it sends the user's question to the retrieval service and then to the inference service. The retrieval service returns the most relevant document based on the question, and the inference service uses this document to generate an answer.\n\n3. **retrieval_service.py (Retrieve Service)**: This script defines the \"/re"
+  },
+  {
+    "id": 2,
+    "question": "How does app.py obtain retrieved context before calling the inference service? Identify the relevant endpoint, function/module, and service ports involved.",
+    "answer": "In `app.py`, the retrieved context is obtained by calling the `/ask-services` endpoint of the `RetrievalService`. This endpoint makes a GET request to the `RETRIEVE_SERVICE_URL`, which is set to `http://localhost:8001/retrieve`. The `RetrievalService` uses the `retrieve` function from the `retrieve` module to process the query and return the retrieved context. The retrieved context includes the filename, source document, similarity score, and context text. This context is then used to call the inference service at `INFERENCE_SERVICE_URL`, which is set to `http://localhost:800"
+  },
+  {
+    "id": 3,
+    "question": "Explain how retrieve.py and create_embeddings.py work together. What is created by create_embeddings.py and how is it later used by retrieve.py?",
+    "answer": "`create_embeddings.py` is responsible for creating embeddings for a set of documents using a pre-trained language model. It reads text files from a knowledge base directory, generates embeddings for each document's text, and saves the resulting embedds and document metadata in a JSON file. This JSON file, `embeddings.json`, is structured with two keys: `documents` and `embeddings`. The `documents` key maps to a list of dictionaries, each containing the filename and text of a document. The `embeddings` key maps to a list of lists, where each sublist represents the embedding vector for the corresponding document.\n\n\n`re"
+  },
+  {
+    "id": 4,
+    "question": "If the retrieval service port changes, which file needs to be updated on the client side and what configuration value must change? Explain why.",
+    "answer": "If the retrieval service port changes, the client side code that specifies the `RETRIEVAL_SERVICE_URL` needs to be updated. Specifically, the part of the code that defines the `RETRIEVAL_SERVICE_URL` should be modified to reflect the new port number. For example, if the new port is `8002`, the line in the client code should be changed from:\n\n```python\nRETRIEVAL_SERVICE_URL = \"http://localhost:8001/retrieve\"\n```\n\nto\n\n```python\nRETRIEVAL_SERVICE_URL = \"http://localhost:8002"
+  },
+  {
+    "id": 5,
+    "question": "Compare the responsibilities of retrieval_service.py and inference_service.py. How do these two services work together in the Week 3 application?",
+    "answer": "The `retrieval_service.py` and `inference_service.py` play distinct but complementary roles in the Week 3 application, which is designed to assist users in answering questions by leveraging a knowledge base and a language model.\n\n\nThe `retrieval_service.py` is responsible for fetching relevant documents from the knowledge base that are most similar to the user's query. It uses the embedds of the query and documents to calculate similarity scores and retrieve the most relevant document(s). The service returns the filename, similarity score, and context of the selected document to the user. This retrieval step is crucial for narrowing down the vast amount of information available to the most"
+  }
+]

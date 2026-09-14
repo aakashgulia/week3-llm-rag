@@ -1,0 +1,20 @@
+# Python virtual environments
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Runtime logs
+*.log
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+# Local development backups
+*.backup
+*.before-*
+*.frontend-backup

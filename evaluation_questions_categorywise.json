@@ -1,0 +1,29 @@
+[
+  {"id":1,"category":"Explanation","question":"Explain the role of KEDA in the inference-worker architecture."},
+  {"id":2,"category":"Explanation","question":"Explain why the API layer and inference-worker layer are separated."},
+  {"id":3,"category":"Explanation","question":"Explain the end-to-end flow of a user request through the application."},
+
+  {"id":4,"category":"Code Retrieval","question":"Which file is responsible for performing semantic retrieval, and which function performs it?"},
+  {"id":5,"category":"Code Retrieval","question":"Which file contains the /ask-services endpoint?"},
+  {"id":6,"category":"Code Retrieval","question":"Which files contain the code for generating embeddings and storing them in knowledge_base/embeddings.json?"},
+
+  {"id":7,"category":"Dependency Understanding","question":"How does app.py depend on retrieval_service.py?"},
+  {"id":8,"category":"Dependency Understanding","question":"How does retrieval_service.py depend on retrieve.py?"},
+  {"id":9,"category":"Dependency Understanding","question":"How does inference_service.py depend on Ollama?"},
+
+  {"id":10,"category":"Bug Analysis","question":"What would happen if knowledge_base/embeddings.json were missing when app.py starts?"},
+  {"id":11,"category":"Bug Analysis","question":"What problem would occur if RETRIEVAL_SERVICE_URL pointed to the wrong port?"},
+  {"id":12,"category":"Bug Analysis","question":"What is a likely problem if /ask-services receives a retrieval response that does not contain the context field?"},
+
+  {"id":13,"category":"Code Generation","question":"Write a Python/FastAPI endpoint that returns the health status of the inference service."},
+  {"id":14,"category":"Code Generation","question":"Write a Python function that calculates cosine similarity between two NumPy vectors, following the approach used in this project."},
+  {"id":15,"category":"Code Generation","question":"Write a small Python function that selects the highest-scoring document from a list of similarity scores."},
+
+  {"id":16,"category":"Refactoring","question":"How would you refactor the duplicated retrieval logic between app.py and retrieve.py?"},
+  {"id":17,"category":"Refactoring","question":"How would you refactor the hard-coded inference configuration such as model name and num_predict?"},
+  {"id":18,"category":"Refactoring","question":"How would you improve the /ask-services implementation to make its external service calls easier to maintain?"},
+
+  {"id":19,"category":"RAG based Question","question":"What Redis signal does KEDA use to scale inference worker pods?"},
+  {"id":20,"category":"RAG based Question","question":"Why does separating API pods from inference workers help the architecture?"},
+  {"id":21,"category":"RAG based Question","question":"What is the service flow from the client request to the final Code Llama result?"}
+]

@@ -1,0 +1,18 @@
+StarCoder2 Multi-File Understanding — Final Score
+
+Q1: 1/2
+Q2: 2/2
+Q3: 2/2
+Q4: 0/2
+Q5: 1/2
+
+Total: 6/10
+Percentage: 60%
+
+Test conditions:
+- Model: starcoder2:3b
+- Project context: multifile_project_context.txt (327 lines)
+- Questions: multifile_questions.json (5 questions)
+- Temperature: 0
+- num_predict: 220
+- Results: starcoder2_multifile_results_220.json

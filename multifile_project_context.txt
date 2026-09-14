@@ -1,0 +1,327 @@
+from fastapi  import FastAPI
+import json
+from pathlib import Path
+
+import numpy as np
+import requests
+from fastembed import TextEmbedding
+
+app = FastAPI(title="Hybrid LLM Inference Assistant")
+
+OLLAMA_URL = "http://localhost:11434/api/generate"
+RETRIEVAL_SERVICE_URL = "http://localhost:8001/retrieve"
+INFERENCE_SERVICE_URL = "http://localhost:8002/generate"
+EMBEDDINGS_FILE = Path("knowledge_base/embeddings.json")
+
+data = json.loads(
+    EMBEDDINGS_FILE.read_text(encoding="utf-8")
+)
+
+documents = data["documents"]
+document_embeddings = np.array(
+    data["embeddings"],
+    dtype=np.float32
+)
+
+embedding_model = TextEmbedding(
+    model_name="BAAI/bge-small-en-v1.5"
+)
+
+
+def cosine_similarity(a, b):
+    return np.dot(a, b) / (
+        np.linalg.norm(a) * np.linalg.norm(b)
+    )
+
+
+def retrieve_context(question):
+    query_embedding = list(
+        embedding_model.embed([question])
+    )[0]
+
+    query_vector = np.array(
+        query_embedding,
+        dtype=np.float32
+    )
+
+    scores = [
+        cosine_similarity(
+            query_vector,
+            document_vector
+        )
+        for document_vector in document_embeddings
+    ]
+
+    best_index = int(np.argmax(scores))
+    best_document = documents[best_index]
+
+    return (
+        best_document["filename"],
+        best_document["text"],
+        float(scores[best_index])
+    )
+
+
+@app.get("/")
+def home():
+    return {
+        "message": "Hybrid LLM Inference Assistant is running",
+        "status": "ok"
+    }
+
+
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
+
+
+@app.get("/ask")
+def ask(question: str):
+    filename, context, similarity = retrieve_context(question)
+
+    prompt = f"""Use this context to answer the question.
+
+Context:
+{context[:2000]}
+
+Question:
+{question}
+
+Answer briefly and only using the context."""
+
+    response = requests.post(
+    OLLAMA_URL,
+    json={
+        "model": "codellama:7b-instruct",
+        "prompt": prompt,
+        "stream": False,
+        "options": {
+            "num_predict": 30,
+            "temperature": 0
+        }
+    },
+    timeout=180
+).json()
+
+    return {
+        "question": question,
+        "source_document": filename,
+        "similarity_score": round(similarity, 4),
+        "answer": response["response"]
+
+    }
+@app.get("/ask-services")
+def ask_services(question: str):
+    retrieval_response = requests.get(
+        RETRIEVAL_SERVICE_URL,
+        params={"query": question},
+        timeout=60
+    ).json()
+
+    context = retrieval_response["context"]
+
+    prompt = f"""Use this context to answer the question.
+
+Context:
+{context[:2000]}
+
+Question:
+{question}
+
+Answer briefly and only using the context."""
+
+    inference_response = requests.get(
+        INFERENCE_SERVICE_URL,
+        params={"prompt": prompt},
+        timeout=180
+    ).json()
+
+    return {
+        "question": question,
+        "source_document": retrieval_response["source_document"],
+        "similarity_score": retrieval_response["similarity_score"],
+        "answer": inference_response["answer"]
+    }
+from fastapi import FastAPI
+from retrieve import retrieve
+
+app = FastAPI(title="Retrieval Service")
+
+
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
+
+
+@app.get("/retrieve")
+def retrieve_endpoint(query: str):
+    filename, document, score = retrieve(query)
+
+    return {
+        "query": query,
+        "source_document": filename,
+        "similarity_score": round(float(score), 4),
+        "context": document
+    }
+from pathlib import Path
+import json
+import numpy as np
+from fastembed import TextEmbedding
+
+EMBEDDINGS_FILE = Path("knowledge_base/embeddings.json")
+
+data = json.loads(
+    EMBEDDINGS_FILE.read_text(encoding="utf-8")
+)
+
+documents = data["documents"]
+document_embeddings = np.array(
+    data["embeddings"],
+    dtype=np.float32
+)
+
+model = TextEmbedding(
+    model_name="BAAI/bge-small-en-v1.5"
+)
+
+
+def cosine_similarity(a, b):
+    return np.dot(a, b) / (
+        np.linalg.norm(a) * np.linalg.norm(b)
+    )
+
+
+def retrieve(query):
+    query_embedding = list(
+        model.embed([query])
+    )[0]
+
+    query_vector = np.array(
+        query_embedding,
+        dtype=np.float32
+    )
+
+    scores = [
+        cosine_similarity(
+            query_vector,
+            document_vector
+        )
+        for document_vector in document_embeddings
+    ]
+
+    best_index = int(np.argmax(scores))
+
+    best_document = documents[best_index]
+
+    return (
+        best_document["filename"],
+        best_document["text"],
+        scores[best_index]
+    )
+
+
+if __name__ == "__main__":
+    question = input("Enter your question: ")
+
+    filename, document, score = retrieve(question)
+
+    print("\nSelected document:", filename)
+    print("Similarity score:", round(float(score), 4))
+
+    print("\nRelevant context:")
+    print(document)
+from fastapi import FastAPI
+import requests
+
+app = FastAPI(title="Inference Service")
+
+OLLAMA_URL = "http://localhost:11434/api/generate"
+
+
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
+
+
+@app.get("/generate")
+def generate(prompt: str):
+    response = requests.post(
+        OLLAMA_URL,
+        json={
+            "model": "codellama:7b-instruct",
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "num_predict": 30,
+                "temperature": 0
+            }
+        },
+        timeout=180
+    ).json()
+
+    return {
+        "answer": response["response"]
+    }
+from pathlib import Path
+
+SOURCE_FILE = Path("knowledge_base/autoscaling.txt")
+CHUNK_SIZE = 500
+
+
+def chunk_text(text, chunk_size=CHUNK_SIZE):
+    words = text.split()
+    chunks = []
+
+    for i in range(0, len(words), chunk_size):
+        chunk = " ".join(words[i:i + chunk_size])
+        chunks.append(chunk)
+
+    return chunks
+
+
+text = SOURCE_FILE.read_text(encoding="utf-8")
+chunks = chunk_text(text)
+
+print(f"Created {len(chunks)} chunk(s).")
+
+for index, chunk in enumerate(chunks, start=1):
+    print(f"\n--- Chunk {index} ---")
+    print(chunk)
+
+from pathlib import Path
+import json
+from fastembed import TextEmbedding
+
+KNOWLEDGE_BASE = Path("knowledge_base")
+OUTPUT_FILE = KNOWLEDGE_BASE / "embeddings.json"
+
+model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
+
+documents = []
+embeddings = []
+
+for file_path in sorted(KNOWLEDGE_BASE.glob("*.txt")):
+    text = file_path.read_text(encoding="utf-8").strip()
+
+    if text:
+        documents.append({
+            "filename": file_path.name,
+            "text": text
+        })
+
+        embedding = list(model.embed([text]))[0]
+        embeddings.append(embedding.tolist())
+
+data = {
+    "documents": documents,
+    "embeddings": embeddings
+}
+
+OUTPUT_FILE.write_text(
+    json.dumps(data),
+    encoding="utf-8"
+)
+
+print(f"Documents embedded: {len(documents)}")
+print(f"Embedding dimensions: {len(embeddings[0])}")
+print(f"Saved to: {OUTPUT_FILE}")

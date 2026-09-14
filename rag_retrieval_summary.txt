@@ -1,0 +1,34 @@
+WEEK 4 RAG RETRIEVAL ANALYSIS
+============================================================
+
+Total questions evaluated: 20
+Documents selected:
+  autoscaling.txt: 8
+  llm_inference.txt: 12
+
+Average similarity: 0.6949
+Highest similarity: 0.8513
+Lowest similarity: 0.5767
+
+QUESTION-BY-QUESTION RETRIEVAL RESULTS
+------------------------------------------------------------
+Q01 | autoscaling.txt | similarity=0.8513
+Q02 | autoscaling.txt | similarity=0.7972
+Q03 | autoscaling.txt | similarity=0.7945
+Q04 | autoscaling.txt | similarity=0.8425
+Q05 | autoscaling.txt | similarity=0.8418
+Q06 | llm_inference.txt | similarity=0.7823
+Q07 | autoscaling.txt | similarity=0.794
+Q08 | llm_inference.txt | similarity=0.797
+Q09 | autoscaling.txt | similarity=0.6106
+Q10 | llm_inference.txt | similarity=0.6311
+Q11 | llm_inference.txt | similarity=0.6064
+Q12 | autoscaling.txt | similarity=0.5917
+Q13 | llm_inference.txt | similarity=0.6371
+Q14 | llm_inference.txt | similarity=0.5797
+Q15 | llm_inference.txt | similarity=0.593
+Q16 | llm_inference.txt | similarity=0.7677
+Q17 | llm_inference.txt | similarity=0.5968
+Q18 | llm_inference.txt | similarity=0.5767
+Q19 | llm_inference.txt | similarity=0.6264
+Q20 | llm_inference.txt | similarity=0.5811

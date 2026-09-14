@@ -1,0 +1,82 @@
+[
+  {
+    "id": 1,
+    "reference_answer": "KEDA uses the length of the Redis request queue as a scaling signal. It can scale inference worker pods according to the number of pending requests in Redis."
+  },
+  {
+    "id": 2,
+    "reference_answer": "The Redis request queue length, representing the number of pending requests, can be used by KEDA to trigger worker scaling."
+  },
+  {
+    "id": 3,
+    "reference_answer": "KEDA scales inference worker pods based on an external event-driven metric: the length of the Redis request queue."
+  },
+  {
+    "id": 4,
+    "reference_answer": "HPA scales application pods based on resource utilization such as CPU usage. It is useful when sustained computational load increases and additional replicas are required."
+  },
+  {
+    "id": 5,
+    "reference_answer": "HPA can scale API pods according to CPU utilization, while KEDA can scale inference worker pods according to the number of pending requests in Redis."
+  },
+  {
+    "id": 6,
+    "reference_answer": "Redis acts as a request queue between the API layer and inference workers. It allows requests to wait when workers are busy instead of requiring every request to be processed immediately."
+  },
+  {
+    "id": 7,
+    "reference_answer": "Queue length is useful because it represents the number of pending inference requests. KEDA can use the Redis queue length to scale inference worker pods according to demand."
+  },
+  {
+    "id": 8,
+    "reference_answer": "Inference workers retrieve pending requests from Redis and process them using the LLM inference service. Ollama communicates with Code Llama, which performs language-model inference and generates the response."
+  },
+  {
+    "id": 9,
+    "reference_answer": "The documented pipeline includes the API layer, Redis request queue, inference workers, Ollama, and Code Llama. The Week 3 RAG implementation also performs query embedding, cosine-similarity retrieval, and passes retrieved context to the LLM."
+  },
+  {
+    "id": 10,
+    "reference_answer": "The application retrieves relevant context so the LLM can answer using information from the knowledge base. The prompt instructs the model to answer using the retrieved context."
+  },
+  {
+    "id": 11,
+    "reference_answer": "Embeddings represent the knowledge-base documents as numerical vectors so that a query can be compared with them using semantic similarity."
+  },
+  {
+    "id": 12,
+    "reference_answer": "The application creates an embedding for the query, calculates cosine similarity against stored document embeddings, and selects the document with the highest similarity score."
+  },
+  {
+    "id": 13,
+    "reference_answer": "The service-based question-answering flow involves app.py, retrieval_service.py, retrieve.py, the embeddings file, inference_service.py, Ollama, and the Code Llama model."
+  },
+  {
+    "id": 14,
+    "reference_answer": "app.py sends the user's question to retrieval_service.py through the /retrieve endpoint at port 8001. It receives the retrieved context and then sends that context in a prompt to the inference service at port 8002."
+  },
+  {
+    "id": 15,
+    "reference_answer": "retrieval_service.py imports the retrieve function from retrieve.py and calls retrieve(query) when its /retrieve endpoint receives a request."
+  },
+  {
+    "id": 16,
+    "reference_answer": "inference_service.py sends a POST request to Ollama's /api/generate endpoint. It supplies the prompt, uses the Code Llama model, disables streaming, and returns the generated response."
+  },
+  {
+    "id": 17,
+    "reference_answer": "A /ask-services request reaches app.py, which calls retrieval_service.py. The retrieval service uses retrieve.py to create a query embedding and find the highest-similarity document. app.py then sends the retrieved context to inference_service.py, which calls Ollama and returns the model answer."
+  },
+  {
+    "id": 18,
+    "reference_answer": "create_embeddings.py is responsible for generating knowledge-base embeddings, while retrieve.py performs query embedding and semantic retrieval. The embeddings are stored in knowledge_base/embeddings.json."
+  },
+  {
+    "id": 19,
+    "reference_answer": "If knowledge_base/embeddings.json is missing, app.py and retrieve.py cannot load the stored documents and embeddings when they initialize. Retrieval therefore cannot operate normally."
+  },
+  {
+    "id": 20,
+    "reference_answer": "If the retrieval service port changes from 8001, the RETRIEVAL_SERVICE_URL in app.py would need to be updated to the new port. The retrieval service itself would also need to be started or configured to listen on the new port."
+  }
+]

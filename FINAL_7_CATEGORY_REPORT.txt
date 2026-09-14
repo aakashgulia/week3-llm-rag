@@ -1,0 +1,39 @@
+LLM WEEK 4 - 7 CATEGORY EVALUATION REPORT
+=======================================================
+
+CATEGORY-WISE SCORES
+-------------------------------------------------------
+Category                            Phi-3   StarCoder2    CodeLlama
+Explanation                         61.1%         0.0%        52.8%
+Code Retrieval                      55.6%        38.9%  75.0% (2/3)
+Dependency Understanding            61.1%        27.8%        52.8%
+Bug Analysis                        66.7%        55.6%        55.6%
+Code Generation                     50.0%        52.8%        88.9%
+Refactoring                         61.1%        11.1%        41.7%
+RAG based Question                  55.5%        38.9%        72.2%
+
+OVERALL METRICS
+-------------------------------------------------------
+Phi-3 Mini: Score=58.7% | Latency=47.74s | Output tokens=87.6 | Valid=21/21
+StarCoder2: Score=32.1% | Latency=26.53s | Output tokens=80.5 | Valid=21/21
+Code Llama: Score=62.1% | Latency=61.10s | Output tokens=107.2 | Valid=20/21
+
+CATEGORY WINNERS
+-------------------------------------------------------
+Explanation: Phi-3 Mini (61.1%)
+Code Retrieval: Code Llama (75.0%)
+Dependency Understanding: Phi-3 Mini (61.1%)
+Bug Analysis: Phi-3 Mini (66.7%)
+Code Generation: Code Llama (88.9%)
+Refactoring: Phi-3 Mini (61.1%)
+RAG based Question: Code Llama (72.2%)
+
+KEY FINDINGS
+-------------------------------------------------------
+1. Code Llama achieved the highest overall score among valid responses.
+2. Code Llama was strongest in Code Generation and RAG-based questions.
+3. Phi-3 Mini showed more balanced performance across general project tasks.
+4. StarCoder2 had the lowest average latency and output-token usage.
+5. StarCoder2 had the lowest overall rubric score in this evaluation.
+6. Code Llama Q4 timed out after 300 seconds and was therefore marked missing.
+7. Scores are rubric-based project-task scores, not generic LLM accuracy.

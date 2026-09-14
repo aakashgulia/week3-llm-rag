@@ -1,0 +1,102 @@
+[
+  {
+    "id": 1,
+    "category": "KEDA",
+    "question": "How does KEDA use a Redis queue to scale inference workers?"
+  },
+  {
+    "id": 2,
+    "category": "KEDA",
+    "question": "What signal from Redis can be used by KEDA to trigger worker scaling?"
+  },
+  {
+    "id": 3,
+    "category": "KEDA",
+    "question": "What is the role of KEDA in the inference-worker architecture?"
+  },
+  {
+    "id": 4,
+    "category": "HPA",
+    "question": "What is the purpose of Kubernetes HPA in an autoscaling system?"
+  },
+  {
+    "id": 5,
+    "category": "HPA",
+    "question": "How is HPA different from KEDA in the context of inference-worker scaling?"
+  },
+  {
+    "id": 6,
+    "category": "Redis",
+    "question": "Why is a Redis request queue useful for managing inference requests?"
+  },
+  {
+    "id": 7,
+    "category": "Autoscaling",
+    "question": "Why would queue length be useful as an autoscaling signal for LLM inference workers?"
+  },
+  {
+    "id": 8,
+    "category": "LLM Inference",
+    "question": "What happens during LLM inference after a request reaches the inference service?"
+  },
+  {
+    "id": 9,
+    "category": "RAG",
+    "question": "What are the main stages of the RAG pipeline used in the Week 3 application?"
+  },
+  {
+    "id": 10,
+    "category": "RAG",
+    "question": "Why does the application retrieve relevant context before sending a question to the LLM?"
+  },
+  {
+    "id": 11,
+    "category": "Embeddings",
+    "question": "What is the purpose of generating embeddings for the knowledge base?"
+  },
+  {
+    "id": 12,
+    "category": "Retrieval",
+    "question": "How does semantic similarity help the application select relevant information?"
+  },
+  {
+    "id": 13,
+    "category": "Architecture",
+    "question": "Which services participate in the end-to-end question-answering flow?"
+  },
+  {
+    "id": 14,
+    "category": "Architecture",
+    "question": "How does app.py communicate with retrieval_service.py in the Week 3 application?"
+  },
+  {
+    "id": 15,
+    "category": "Architecture",
+    "question": "How does retrieval_service.py depend on retrieve.py?"
+  },
+  {
+    "id": 16,
+    "category": "Architecture",
+    "question": "How does inference_service.py communicate with Ollama?"
+  },
+  {
+    "id": 17,
+    "category": "Codebase",
+    "question": "What happens from a user's /ask-services request until the final answer is returned?"
+  },
+  {
+    "id": 18,
+    "category": "Codebase",
+    "question": "Which files are responsible for creating embeddings and performing retrieval?"
+  },
+  {
+    "id": 19,
+    "category": "Codebase",
+    "question": "What would break if knowledge_base/embeddings.json were missing?"
+  },
+  {
+    "id": 20,
+    "category": "Codebase",
+    "question": "Which components would need to change if the retrieval service port changed from 8001?"
+  }
+]

@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "question": "Trace the complete flow of a user question through app.py, retrieval_service.py, retrieve.py, inference_service.py, and Ollama. Explain what each component does.",
+    "answer": "The user's question flows through the following components in the Hybrid LLM Inference Assistant:\n\n1. app.py: This is the main entry point of the application. It defines the FastAPI endpoints and serves as the interface for the user to ask a question.\n2. retrieve_service.py: This is a FastAPI endpoint that retrieves the relevant context for a given question from the knowledge base. It uses the retrieve function defined in retrieve.py to perform the retrieval.\n3. retrieve.py: This is a Python script that contains the retrieve function. It takes a question as input and uses the TextEmbedding model to embed the question in a vector space. It then finds the most similar document in the knowledge base to the embedded question and returns the filename, context, and similarity score of the best match.\n4. inference_service.py: This is a FastAPI endpoint that uses the Ollama model to generate an answer for a given question. It takes a prompt as input and sends a POST request to the",
+    "eval_count": 220,
+    "prompt_eval_count": 2435,
+    "total_duration": 87420806055
+  },
+  {
+    "id": 2,
+    "question": "How does app.py obtain retrieved context before calling the inference service? Identify the relevant endpoint, function/module, and service ports involved.",
+    "answer": "\nThe relevant endpoint, function/module, and service ports involved in obtaining the retrieved context before calling the inference service are:\n\n* Endpoint: `/ask-services`\n* Function/module: `retrieve_endpoint`\n* Service ports:\n\t+ `RETRIEVAL_SERVICE_URL`: `http://localhost:8001/retrieve`\n\t+ `INFERENCE_SERVICE_URL`: `http://localhost:8002/generate`\n\nThe `/ask-services` endpoint is a GET endpoint that calls the `retrieve_endpoint` function, which in turn calls the `retrieve` function to retrieve the relevant context from the knowledge base. The `retrieve` function uses the `TextEmbedding` model to embed the query in the knowledge base, and then uses the cosine similarity algorithm to find the most similar document in the knowledge base to the query. The `retrieve` function then returns the filename, context, and similarity score",
+    "eval_count": 220,
+    "prompt_eval_count": 2422,
+    "total_duration": 103518532445
+  },
+  {
+    "id": 3,
+    "question": "Explain how retrieve.py and create_embeddings.py work together. What is created by create_embeddings.py and how is it later used by retrieve.py?",
+    "answer": "Retrieve.py and create_embeddings.py work together to create a knowledge base for the Hybrid LLM Inference Assistant.\n\ncreate_embeddings.py is responsible for creating the embeddings for the knowledge base. It uses the BGE-small-en-v1.5 model to embed the text documents in the knowledge base. The resulting embeddings are saved to a JSON file in the knowledge_base directory.\n\nretrieve.py is responsible for retrieving the most relevant document for a given question. It uses the embeddings created by create_embeddings.py to calculate the cosine similarity between the question and each document in the knowledge base. The document with the highest similarity score is then returned as the most relevant document.\n\nIn summary, create_embeddings.py creates the embeddings for the knowledge base, while retrieve.py uses these embeddings to retrieve the most relevant document for a given question.",
+    "eval_count": 208,
+    "prompt_eval_count": 2432,
+    "total_duration": 108188108925
+  },
+  {
+    "id": 4,
+    "question": "If the retrieval service port changes, which file needs to be updated on the client side and what configuration value must change? Explain why.",
+    "answer": "The retrieval service port change would require an update to the client-side configuration file.\n\nThe client-side configuration file is typically a JSON file that contains the necessary information for the client to connect to the server, such as the server's IP address, port number, and any authentication credentials. When the retrieval service port changes, the client would need to be updated to reflect this change.\n\nThe configuration file would need to be updated to reflect the new port number used by the retrieval service. This would involve modifying the \"port\" value in the configuration file to match the new port number used by the retrieval service.\n\nFor example, if the retrieval service is now running on port 8080 instead of port 8001, the client-side configuration file would need to be updated to reflect this change. The \"port\" value in the configuration file would be updated to \"8080\" instead of \"8001\".\n\nThis is necessary because the client needs to be able to connect to the retr",
+    "eval_count": 220,
+    "prompt_eval_count": 2422,
+    "total_duration": 153328222874
+  },
+  {
+    "id": 5,
+    "question": "Compare the responsibilities of retrieval_service.py and inference_service.py. How do these two services work together in the Week 3 application?",
+    "answer": "Retrieval_service.py and inference_service.py are both FastAPI services that are used in the Week 3 application.\n\nRetrieval_service.py is responsible for retrieving the most relevant document for a given question. It does this by taking the question as input, embedding it using a BGE model, and then finding the document with the highest cosine similarity score to the query embedding. The service returns the filename, context, and similarity score of the selected document.\n\nInference_service.py is responsible for generating an answer to a given question. It does this by taking the question as input, embedding it using a BGE model, and then sending the embedding to the OLLAMA service to generate an answer. The service returns the answer generated by OLLAMA.\n\nBoth services work together in the Week 3 application by allowing the user to ask a question, which is then passed to the retrieval service to retrieve the most relevant document, and then passed to the inference service to generate an answer. The user",
+    "eval_count": 220,
+    "prompt_eval_count": 2427,
+    "total_duration": 132231674227
+  }
+]

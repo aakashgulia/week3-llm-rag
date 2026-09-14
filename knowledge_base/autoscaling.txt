@@ -1,0 +1,1544 @@
+AUTOSCALING: FUNDAMENTALS, KUBERNETES HPA, KEDA, REDIS QUEUES, AND HYBRID LLM INFERENCE
+
+============================================================
+1. WHAT IS AUTOSCALING?
+============================================================
+
+Autoscaling is the automatic adjustment of computing capacity according to workload demand.
+
+Instead of permanently running a fixed amount of infrastructure, an autoscaling system observes workload-related signals and changes capacity when demand changes.
+
+The basic idea is:
+
+Workload demand changes
+-> Observe workload metrics
+-> Compare current workload with desired capacity
+-> Calculate whether more or fewer instances are needed
+-> Change the number of running instances
+-> Continue observing the workload
+
+Autoscaling is useful because application workloads are rarely constant. An application may receive a small number of requests during normal periods and a large number of requests during traffic bursts.
+
+Without autoscaling, an organization has two common choices:
+
+1. Run too little capacity and risk poor performance during traffic spikes.
+2. Run a large amount of capacity all the time and waste resources during periods of low demand.
+
+Autoscaling attempts to find a better balance by allowing capacity to change with demand.
+
+In Kubernetes, autoscaling can happen horizontally or vertically.
+
+Horizontal scaling means changing the number of Pods running an application.
+
+Vertical scaling means changing the CPU or memory resources assigned to existing Pods.
+
+Horizontal scaling is commonly called scale-out when replicas increase and scale-in when replicas decrease.
+
+Example:
+
+2 Pods
+-> workload increases
+-> 4 Pods
+-> workload increases further
+-> 8 Pods
+
+When demand falls:
+
+8 Pods
+-> workload decreases
+-> 4 Pods
+-> workload decreases further
+-> 2 Pods
+
+
+============================================================
+2. HORIZONTAL VS VERTICAL SCALING
+============================================================
+
+Horizontal scaling changes the number of application instances.
+
+For example:
+
+1 Pod
+-> 2 Pods
+-> 4 Pods
+-> 8 Pods
+
+Each additional Pod provides another instance of the application.
+
+Vertical scaling changes the resources available to an existing instance.
+
+For example:
+
+2 CPU
+-> 4 CPU
+
+or:
+
+4 GB memory
+-> 8 GB memory
+
+Horizontal scaling is particularly useful for workloads that can run multiple replicas in parallel.
+
+Vertical scaling can be useful when a single application instance needs more resources and cannot easily distribute its workload across multiple replicas.
+
+Kubernetes supports both approaches through different mechanisms.
+
+Horizontal Pod Autoscaler, or HPA, is used for horizontal scaling.
+
+Vertical Pod Autoscaler, or VPA, is designed for vertical resource adjustment.
+
+This document primarily focuses on horizontal autoscaling and event-driven autoscaling because they are relevant to the hybrid LLM inference architecture used in this project.
+
+
+============================================================
+3. WHY AUTOSCALING IS IMPORTANT
+============================================================
+
+Applications can experience:
+
+- Normal traffic
+- Sudden traffic bursts
+- Sustained high traffic
+- Temporary spikes
+- Long periods of low traffic
+- Uneven workload distribution
+
+A fixed number of replicas may not be appropriate for every situation.
+
+For example, an inference service might normally receive 5 requests per minute but suddenly receive 100 requests in a short period.
+
+If the application always runs only two workers, requests may accumulate.
+
+If the application always runs twenty workers, resources may be unnecessarily consumed during quiet periods.
+
+Autoscaling allows the application to react to changing demand.
+
+The important principle is:
+
+Capacity should respond to workload.
+
+However, autoscaling does not mean unlimited scaling. Maximum replica counts, available cluster resources, model size, CPU, memory, GPU capacity, application limits, and other constraints still matter.
+
+
+============================================================
+4. KUBERNETES WORKLOADS AND REPLICAS
+============================================================
+
+Kubernetes runs applications in Pods.
+
+A Pod is the basic execution unit in Kubernetes.
+
+A workload such as a Deployment can manage multiple replicas of an application.
+
+For example:
+
+Deployment
+-> Pod 1
+-> Pod 2
+-> Pod 3
+
+If the Deployment has three replicas, Kubernetes attempts to maintain three running Pods matching the desired state.
+
+Autoscaling changes this desired replica count.
+
+For example:
+
+Current desired replicas = 3
+
+HPA determines that 5 replicas are required.
+
+Kubernetes changes the desired scale to 5.
+
+The Deployment controller then works toward:
+
+Pod 1
+Pod 2
+Pod 3
+Pod 4
+Pod 5
+
+This separation between desired state and actual running state is fundamental to Kubernetes.
+
+
+============================================================
+5. WHAT IS HORIZONTAL POD AUTOSCALER?
+============================================================
+
+The Kubernetes Horizontal Pod Autoscaler, commonly called HPA, automatically adjusts the number of replicas of a scalable workload to match demand.
+
+HPA can target workloads such as Deployments and StatefulSets.
+
+HPA is implemented as a Kubernetes API resource and a controller.
+
+The HPA controller periodically evaluates observed metrics and determines whether the workload should have more or fewer replicas.
+
+The general flow is:
+
+Workload
+-> Metrics
+-> HPA controller
+-> Desired replica calculation
+-> Workload scale update
+-> Kubernetes creates or removes Pods
+
+HPA can use metrics such as:
+
+- CPU utilization
+- Memory utilization
+- Custom metrics
+- External metrics
+
+The choice of metric is important.
+
+The metric should represent the type of workload pressure that the application experiences.
+
+
+============================================================
+6. HOW HPA WORKS
+============================================================
+
+HPA can be understood as a feedback control loop.
+
+The controller repeatedly performs a cycle:
+
+1. Identify the workload being controlled.
+2. Obtain the configured metric.
+3. Observe the current metric value.
+4. Compare the current value with the desired target.
+5. Calculate a desired number of replicas.
+6. Apply configured minimum and maximum replica limits.
+7. Consider scaling behavior and stabilization rules.
+8. Update the workload's desired replica count when scaling is required.
+9. Repeat the process.
+
+Conceptually:
+
+Observe
+-> Compare
+-> Calculate
+-> Scale
+-> Observe again
+
+HPA is therefore not a one-time decision.
+
+It continuously evaluates workload conditions over time.
+
+The Kubernetes HPA controller runs this process periodically rather than continuously every instant.
+
+
+============================================================
+7. HPA CPU UTILIZATION
+============================================================
+
+CPU utilization is one of the most common HPA signals.
+
+Suppose an application has:
+
+Current replicas = 2
+Target CPU utilization = 50%
+Observed average CPU utilization = 100%
+
+The observed utilization is significantly above the desired target.
+
+HPA can determine that additional replicas are required.
+
+Conceptually:
+
+High CPU utilization
+-> workload is under computational pressure
+-> HPA recommends more replicas
+-> Kubernetes starts additional Pods
+-> workload can be distributed across more replicas
+
+When CPU utilization later decreases:
+
+Low CPU utilization
+-> less computational pressure
+-> HPA can recommend fewer replicas
+-> Kubernetes removes unnecessary replicas
+
+CPU utilization is not universally the best scaling signal.
+
+For queue-based workloads, a large backlog may exist even when a particular metric does not fully represent pending work.
+
+That distinction becomes especially important for LLM inference.
+
+
+============================================================
+8. RESOURCE REQUESTS AND HPA
+============================================================
+
+When HPA uses resource utilization such as CPU, Kubernetes uses resource requests when calculating utilization.
+
+For example, if a container requests:
+
+CPU = 500m
+
+and its observed CPU usage is:
+
+250m
+
+then its CPU utilization relative to the request is approximately:
+
+250 / 500 = 50%
+
+If the HPA target is 50%, that workload is approximately at its configured target.
+
+This is why appropriate resource requests are important when using CPU or memory utilization for autoscaling.
+
+If resource requests are missing or poorly chosen, utilization-based scaling may not represent the application's actual workload pressure correctly.
+
+
+============================================================
+9. HPA REPLICA CALCULATION
+============================================================
+
+At a high level, HPA uses the relationship between the current metric value and desired metric value to determine a desired replica count.
+
+A simplified conceptual formula is:
+
+desired replicas =
+current replicas * current metric / desired metric
+
+The result is rounded appropriately and constrained by configured limits.
+
+Example:
+
+Current replicas = 2
+Current CPU metric = 100
+Desired CPU metric = 50
+
+Conceptually:
+
+2 * (100 / 50)
+= 4
+
+Therefore, approximately 4 replicas may be desired.
+
+Another example:
+
+Current replicas = 4
+Current metric = 50
+Desired metric = 100
+
+Conceptually:
+
+4 * (50 / 100)
+= 2
+
+Therefore, approximately 2 replicas may be desired.
+
+This is a simplified explanation of the scaling algorithm. The real Kubernetes HPA controller also considers factors such as tolerance, missing metrics, Pod readiness, multiple metrics, stabilization, and configured scaling behavior.
+
+
+============================================================
+10. MINIMUM AND MAXIMUM REPLICAS
+============================================================
+
+HPA normally uses minimum and maximum replica boundaries.
+
+Example:
+
+minReplicas = 2
+maxReplicas = 10
+
+This means the autoscaler should normally operate within the configured range.
+
+If workload pressure becomes very high, HPA cannot simply create an unlimited number of Pods.
+
+The maximum replica limit prevents uncontrolled scaling.
+
+The minimum replica count ensures that the workload retains a baseline amount of capacity.
+
+The exact values should be chosen based on application requirements and available infrastructure.
+
+
+============================================================
+11. SCALE-UP
+============================================================
+
+Scale-up means increasing the number of replicas.
+
+Example:
+
+2 API Pods
+-> traffic increases
+-> CPU utilization increases
+-> HPA detects the increased metric
+-> desired replicas increase
+-> Kubernetes creates additional API Pods
+-> more Pods can accept traffic
+
+Scale-up is useful when the workload requires additional processing capacity.
+
+The speed of scale-up depends on HPA configuration, workload startup time, cluster capacity, container startup time, image availability, and application readiness.
+
+
+============================================================
+12. SCALE-DOWN
+============================================================
+
+Scale-down means reducing the number of replicas.
+
+Example:
+
+8 API Pods
+-> traffic decreases
+-> CPU utilization decreases
+-> HPA observes lower demand
+-> desired replicas decrease
+-> excess Pods are removed
+
+Scale-down needs to be handled carefully.
+
+If the system scales down too aggressively, a new traffic spike can immediately require scale-up again.
+
+This can create instability or frequent replica changes.
+
+Kubernetes HPA supports stabilization and scaling behavior to reduce this kind of flapping.
+
+
+============================================================
+13. HPA STABILIZATION AND SCALING BEHAVIOR
+============================================================
+
+Autoscaling metrics can fluctuate.
+
+For example:
+
+CPU = 70%
+CPU = 45%
+CPU = 65%
+CPU = 48%
+CPU = 68%
+
+If the system immediately changed replica counts for every small fluctuation, it could repeatedly create and remove Pods.
+
+This behavior is sometimes called flapping or thrashing.
+
+Kubernetes HPA supports configurable scaling behavior and stabilization windows.
+
+A stabilization window can help prevent rapid scale-down decisions caused by short-lived metric reductions.
+
+Scaling policies can also limit how quickly the replica count changes.
+
+This is important because starting or stopping Pods has a cost.
+
+For an LLM workload, that cost can be especially significant because starting an inference worker may involve loading a large model or establishing connections to model-serving infrastructure.
+
+
+============================================================
+14. HPA METRIC TYPES
+============================================================
+
+HPA can work with several types of metrics.
+
+Resource metrics:
+
+- CPU
+- Memory
+
+Custom metrics:
+
+Application-specific metrics exposed through Kubernetes metric APIs.
+
+External metrics:
+
+Metrics originating from external systems.
+
+Examples of application-level metrics might include:
+
+- Requests per second
+- Queue-related measurements
+- Request latency
+- Application-specific workload indicators
+
+The best metric depends on what actually represents workload pressure.
+
+CPU is useful when CPU demand tracks workload.
+
+Queue depth can be more useful when the key problem is pending work waiting for processing.
+
+
+============================================================
+15. METRICS SERVER
+============================================================
+
+Kubernetes HPA commonly obtains resource metrics through the Kubernetes resource metrics API.
+
+A component commonly used to provide these metrics is Metrics Server.
+
+The HPA controller queries the appropriate metrics APIs to obtain information required for scaling decisions.
+
+For CPU and memory based scaling, the metrics infrastructure must therefore be correctly configured.
+
+If metrics are unavailable, HPA cannot make normal scaling decisions based on those metrics.
+
+This is why metrics availability is an important part of an autoscaling architecture.
+
+
+============================================================
+16. CUSTOM AND EXTERNAL METRICS
+============================================================
+
+Not every application can be scaled effectively using CPU or memory.
+
+For example, a worker system might have:
+
+CPU utilization = 40%
+
+but:
+
+Pending jobs = 500
+
+CPU alone may not communicate that the system has a large backlog.
+
+Custom or external metrics allow scaling decisions to use application-specific workload signals.
+
+Examples include:
+
+- Queue length
+- Request rate
+- Number of pending messages
+- Business events
+- External service measurements
+
+Event-driven autoscaling systems such as KEDA are particularly useful for these situations.
+
+
+============================================================
+17. WHAT IS KEDA?
+============================================================
+
+KEDA stands for Kubernetes Event-driven Autoscaling.
+
+KEDA extends Kubernetes autoscaling so that workloads can react to events and external workload signals.
+
+KEDA can monitor event sources such as:
+
+- Message queues
+- Streaming systems
+- Databases
+- External services
+- Application events
+
+KEDA is designed to work with Kubernetes rather than replacing Kubernetes autoscaling.
+
+For common Deployment and StatefulSet scenarios, KEDA monitors the event source and provides metrics that Kubernetes HPA can use to drive scaling.
+
+
+============================================================
+18. WHY KEDA IS DIFFERENT FROM BASIC CPU HPA
+============================================================
+
+CPU-based HPA asks a question such as:
+
+"How much CPU resource are the Pods currently using?"
+
+Event-driven autoscaling asks a different question:
+
+"How much work is currently waiting or arriving?"
+
+Consider a queue-based inference system.
+
+Suppose:
+
+CPU utilization = 40%
+Pending requests = 100
+
+CPU might appear moderate, but the queue clearly indicates significant pending work.
+
+An event-driven scaling signal can therefore be more appropriate for the worker layer.
+
+The key difference is the workload signal being used.
+
+
+============================================================
+19. HOW KEDA WORKS WITH HPA
+============================================================
+
+KEDA does not simply replace the Kubernetes HPA controller.
+
+For supported workload types, KEDA monitors an event source and provides scaling information to Kubernetes.
+
+A simplified flow is:
+
+External event source
+-> KEDA scaler
+-> KEDA metrics
+-> Kubernetes HPA
+-> Desired replicas
+-> Kubernetes workload
+
+This allows event-driven signals to participate in Kubernetes autoscaling.
+
+KEDA therefore extends the types of workload signals that can be used for autoscaling.
+
+
+============================================================
+20. KEDA SCALERS AND TRIGGERS
+============================================================
+
+KEDA supports different event sources through scalers.
+
+A scaler knows how to obtain a metric or workload signal from a particular event source.
+
+Examples of event sources supported by KEDA include queue and streaming systems.
+
+A KEDA ScaledObject connects a workload to one or more scaling triggers.
+
+Conceptually:
+
+Workload
++
+Event source
++
+Trigger
+=
+Event-driven scaling configuration
+
+The exact configuration depends on the event source and KEDA scaler being used.
+
+
+============================================================
+21. SCALE TO ZERO
+============================================================
+
+Event-driven systems can sometimes benefit from scaling to zero when no work is available.
+
+For example:
+
+No pending events
+-> zero workers
+
+New event arrives
+-> workload activates
+-> worker starts
+-> work is processed
+
+This can be useful for workloads that are idle for long periods.
+
+However, scale-to-zero is not universally appropriate.
+
+Starting a worker introduces startup latency.
+
+For an LLM inference workload, model loading can be expensive.
+
+Therefore, keeping a small number of warm workers may sometimes provide better response latency than scaling completely to zero.
+
+The correct design depends on the application's latency requirements and infrastructure.
+
+
+============================================================
+22. WHAT IS A QUEUE?
+============================================================
+
+A queue is a structure that holds work until a consumer processes it.
+
+A basic queue architecture contains:
+
+Producer
+-> Queue
+-> Consumer
+
+The producer creates or submits work.
+
+The queue stores pending work.
+
+The consumer retrieves and processes work.
+
+If producers generate work faster than consumers can process it:
+
+Queue length increases.
+
+If consumers process work faster than producers generate it:
+
+Queue length decreases.
+
+This makes queue length a useful representation of pending workload for many worker systems.
+
+
+============================================================
+23. REDIS AS A REQUEST QUEUE
+============================================================
+
+Redis is an in-memory data store that supports data structures and patterns that can be used for queues and background jobs.
+
+In a queue-based inference architecture, Redis can sit between the API layer and inference workers.
+
+The simplified architecture is:
+
+API
+-> Redis queue
+-> Inference workers
+
+The API acts as a producer.
+
+Inference workers act as consumers.
+
+Requests waiting to be processed remain in the queue.
+
+Workers retrieve pending requests and perform inference.
+
+Redis documentation describes queue patterns using structures such as lists and other Redis data structures for background job processing.
+
+The exact queue implementation depends on the application.
+
+
+============================================================
+24. QUEUE DEPTH AS A SCALING SIGNAL
+============================================================
+
+Queue depth represents how much work is waiting.
+
+Consider:
+
+Workers = 2
+Pending requests = 5
+
+The workers may be able to keep up.
+
+Now suppose:
+
+Workers = 2
+Pending requests = 100
+
+The backlog is much larger.
+
+If requests continue arriving faster than workers can process them, the queue grows.
+
+A queue-based scaler can interpret this growing backlog as evidence that additional processing capacity may be required.
+
+Conceptually:
+
+Queue grows
+-> workload pressure increases
+-> KEDA observes event metric
+-> more workers may be requested
+-> more workers process requests
+-> queue drains faster
+
+
+============================================================
+25. PRODUCER AND CONSUMER MODEL
+============================================================
+
+The API layer can be treated as a producer.
+
+The inference worker layer can be treated as consumers.
+
+Example:
+
+User
+-> API producer
+-> Redis queue
+-> Worker 1
+-> Worker 2
+-> Worker 3
+
+If traffic increases:
+
+More requests
+-> Redis queue grows
+-> More workers may be required
+
+If traffic decreases:
+
+Fewer requests
+-> Redis queue shrinks
+-> Fewer workers may be sufficient
+
+This producer-consumer model provides a clear conceptual explanation for queue-based autoscaling.
+
+
+============================================================
+26. WHY QUEUEING IS USEFUL FOR LLM INFERENCE
+============================================================
+
+LLM inference is often more computationally expensive than ordinary API request handling.
+
+An LLM request may involve:
+
+- Prompt processing
+- Model execution
+- Token generation
+- CPU or GPU computation
+- Memory usage
+- Potentially long processing time
+
+If every API request performs inference directly, a sudden burst can occupy API workers for a long time.
+
+A queue provides a buffer.
+
+Instead of:
+
+User
+-> API
+-> Long inference inside API
+
+the architecture can use:
+
+User
+-> API
+-> Redis
+-> Worker
+-> LLM inference
+
+The API layer and inference layer can then scale independently.
+
+This is especially useful when inference duration varies or requests arrive in bursts.
+
+
+============================================================
+27. HYBRID AUTOSCALING
+============================================================
+
+Hybrid autoscaling means using different scaling mechanisms or signals for different components of an application.
+
+A hybrid architecture can use:
+
+HPA
+-> resource utilization
+
+and:
+
+KEDA
+-> event or queue metrics
+
+This is useful when different application layers have different workload characteristics.
+
+For example:
+
+API layer:
+CPU utilization may be a useful signal.
+
+Inference worker layer:
+Redis queue length may be a better signal.
+
+The two layers should not necessarily be scaled using exactly the same metric.
+
+
+============================================================
+28. HPA VS KEDA
+============================================================
+
+HPA:
+
+- Kubernetes-native autoscaling
+- Automatically adjusts workload replicas
+- Commonly uses CPU and memory
+- Can use custom and external metrics
+- Uses a controller and scaling policies
+- Works well when resource utilization represents demand
+
+KEDA:
+
+- Kubernetes Event-driven Autoscaling
+- Connects workloads to external event sources
+- Supports event-driven workload signals
+- Works with Kubernetes HPA
+- Useful for queue and event-driven workloads
+- Can support activation and scale-to-zero scenarios for appropriate triggers
+
+Neither mechanism is universally better.
+
+The correct mechanism depends on the workload.
+
+A system can use both when different components require different scaling signals.
+
+
+============================================================
+29. PROJECT-SPECIFIC HYBRID ARCHITECTURE
+============================================================
+
+The project uses a hybrid autoscaling design for LLM inference.
+
+The intended logical architecture is:
+
+User Request
+    |
+    v
+API Layer
+    |
+    v
+Redis Request Queue
+    |
+    v
+Inference Worker
+    |
+    v
+Ollama
+    |
+    v
+Code Llama
+    |
+    v
+Response
+
+The API layer handles incoming requests.
+
+Redis provides the queue between the API layer and inference workers.
+
+Inference workers retrieve requests from Redis and perform inference.
+
+Ollama provides the model-serving interface.
+
+Code Llama performs language-model generation in the described project architecture.
+
+The autoscaling responsibilities are separated:
+
+API layer
+-> HPA
+-> CPU/resource utilization
+
+Inference worker layer
+-> KEDA
+-> Redis request queue workload
+
+This separation is project-specific.
+
+
+============================================================
+30. COMPLETE PROJECT REQUEST FLOW
+============================================================
+
+A request can conceptually travel through the system as follows:
+
+1. The user submits an inference request.
+2. The API receives the request.
+3. The API creates or forwards the inference work.
+4. The request is placed into Redis.
+5. Redis stores the pending request.
+6. An inference worker retrieves the request.
+7. The worker sends the inference task to Ollama.
+8. Ollama communicates with the selected language model.
+9. Code Llama performs the language-model inference.
+10. The worker receives the generated result.
+11. The result is returned through the application architecture.
+12. The user receives the response.
+
+Meanwhile:
+
+HPA observes API workload metrics.
+
+KEDA observes the worker workload signal represented by the queue.
+
+Therefore request processing and autoscaling happen as related but separate processes.
+
+
+============================================================
+31. NORMAL WORKLOAD SCENARIO
+============================================================
+
+Assume the system receives a small number of requests.
+
+The API receives requests normally.
+
+The Redis queue remains short.
+
+Existing inference workers process requests quickly enough.
+
+API CPU utilization remains within the expected range.
+
+In this situation:
+
+HPA may keep the API at its current replica count.
+
+KEDA may keep the inference worker count at its current level.
+
+No significant scale-out is required.
+
+
+============================================================
+32. SUDDEN BURST SCENARIO
+============================================================
+
+Suppose many users send requests at approximately the same time.
+
+The flow becomes:
+
+Many users
+-> API receives many requests
+-> Redis queue receives many jobs
+-> queue depth increases
+-> workers process jobs
+-> pending work remains
+-> KEDA observes the workload signal
+-> additional workers may be requested
+-> workers process jobs in parallel
+-> queue starts draining
+
+The queue acts as a buffer between incoming traffic and inference processing capacity.
+
+This is one of the key reasons a queue-based inference architecture can be useful.
+
+
+============================================================
+33. SUSTAINED API LOAD SCENARIO
+============================================================
+
+Suppose API traffic remains high for an extended period.
+
+The API Pods consume more CPU.
+
+HPA observes the CPU utilization.
+
+If the observed utilization exceeds the configured target sufficiently:
+
+HPA
+-> increases desired API replicas
+-> Kubernetes creates additional API Pods
+-> API capacity increases
+
+The inference worker layer can independently scale based on its queue workload.
+
+This means API scaling does not automatically mean worker scaling by the same amount.
+
+
+============================================================
+34. GROWING QUEUE SCENARIO
+============================================================
+
+Suppose inference workers cannot process requests as quickly as they arrive.
+
+Example:
+
+Incoming requests:
+20 per minute
+
+Processing capacity:
+10 per minute
+
+The queue will grow.
+
+After several minutes, pending requests may become significant.
+
+The growing queue represents backlog.
+
+An event-driven autoscaler can use the queue signal to request additional worker capacity.
+
+After additional workers become available:
+
+Processing capacity increases.
+
+If processing capacity becomes greater than incoming request rate:
+
+Queue depth begins to fall.
+
+
+============================================================
+35. QUEUE DRAINING SCENARIO
+============================================================
+
+Suppose a burst has ended.
+
+The API receives fewer requests.
+
+Workers continue processing pending requests.
+
+The Redis queue decreases.
+
+Eventually:
+
+Queue length
+-> decreases
+-> approaches normal level
+
+KEDA can then determine that the workload no longer requires as many workers, depending on the configured scaling policy.
+
+Workers can scale down.
+
+This allows capacity to follow the workload rather than remaining permanently at the peak level.
+
+
+============================================================
+36. LOW TRAFFIC SCENARIO
+============================================================
+
+During very low traffic:
+
+API workload may be small.
+
+Redis queue may be nearly empty.
+
+Few inference workers may be sufficient.
+
+Depending on the configured policies, workloads may remain at a minimum replica count or may be able to scale toward zero for appropriate event-driven configurations.
+
+The decision depends on latency requirements.
+
+For LLM inference, scaling to zero can create additional startup and model-loading latency.
+
+Therefore, keeping a warm baseline may sometimes be preferable.
+
+
+============================================================
+37. WHY API AND WORKERS SHOULD BE SEPARATED
+============================================================
+
+The API layer and inference worker layer perform different responsibilities.
+
+API responsibilities:
+
+- Receive HTTP requests
+- Validate requests
+- Queue work
+- Return request information
+- Handle client communication
+
+Worker responsibilities:
+
+- Retrieve inference jobs
+- Perform expensive processing
+- Communicate with model-serving infrastructure
+- Generate results
+- Complete queued work
+
+If both responsibilities are tightly coupled, scaling one layer may unnecessarily scale the other.
+
+Separating them allows independent scaling.
+
+This is particularly valuable when inference is much more expensive than request handling.
+
+
+============================================================
+38. ADVANTAGES OF HYBRID AUTOSCALING
+============================================================
+
+A hybrid autoscaling design can provide:
+
+1. Independent scaling of application layers.
+2. Resource-based scaling for API workloads.
+3. Event-driven scaling for worker workloads.
+4. Queue buffering during bursts.
+5. Better representation of pending inference work.
+6. More efficient resource usage.
+7. Ability to react to different workload characteristics.
+8. Clear separation between request handling and computation.
+
+
+============================================================
+39. LIMITATIONS AND TRADE-OFFS
+============================================================
+
+Autoscaling is not free.
+
+Scaling introduces:
+
+- Pod startup time
+- Scheduling overhead
+- Image pulling
+- Resource consumption
+- Network overhead
+- Model-loading overhead
+- Possible cold-start latency
+
+For LLM workloads, model loading can be particularly expensive.
+
+If every new worker has to load a large language model, rapidly creating workers may not immediately improve latency.
+
+Therefore autoscaling policy must consider:
+
+- Model size
+- Model loading time
+- Available memory
+- CPU/GPU capacity
+- Expected request rate
+- Request duration
+- Queue length
+- Required response latency
+
+
+============================================================
+40. LLMS AND COLD STARTS
+============================================================
+
+LLM inference differs from many lightweight web workloads.
+
+A normal web application container may start relatively quickly.
+
+An LLM worker may need to:
+
+1. Start the container.
+2. Initialize runtime dependencies.
+3. Load model files.
+4. Allocate memory.
+5. Initialize the inference engine.
+6. Become ready to process requests.
+
+Therefore the time between "scale up" and "ready to process inference" can be significant.
+
+This means an autoscaler must be evaluated not only by whether it creates Pods, but also by whether those Pods become useful processing capacity quickly enough.
+
+
+============================================================
+41. AUTOSCALING AND QUEUE BACKLOG
+============================================================
+
+Queue backlog and request latency are related.
+
+If the queue grows continuously, users may eventually wait longer.
+
+Therefore a queue-based scaling strategy attempts to prevent backlog from growing beyond an acceptable level by adding processing capacity.
+
+However, scaling workers too aggressively can also waste resources.
+
+The system must find a balance between:
+
+Fast processing
+and
+Efficient resource usage.
+
+
+============================================================
+42. AUTOSCALING DOES NOT GUARANTEE PERFORMANCE
+============================================================
+
+Autoscaling can provide more capacity, but it does not automatically solve every performance problem.
+
+For example:
+
+- The model itself may be too slow.
+- The node may not have enough memory.
+- CPU may be saturated.
+- GPU capacity may be limited.
+- Redis may become a bottleneck.
+- Network communication may be slow.
+- New Pods may take too long to become ready.
+- Maximum replicas may be reached.
+
+Autoscaling is one component of a larger performance architecture.
+
+
+============================================================
+43. IMPORTANT DESIGN QUESTIONS
+============================================================
+
+When designing autoscaling, ask:
+
+1. What represents workload demand?
+2. Is CPU a good signal?
+3. Is memory a good signal?
+4. Is queue depth a better signal?
+5. How quickly can new Pods start?
+6. How long does initialization take?
+7. What is the minimum replica count?
+8. What is the maximum replica count?
+9. How quickly should the system scale up?
+10. How quickly should it scale down?
+11. Can the workload tolerate cold starts?
+12. What happens during a traffic burst?
+13. What happens if the queue continues growing?
+14. What happens when traffic falls?
+15. Is enough infrastructure available for maximum scale?
+
+
+============================================================
+44. COMMON AUTOSCALING PROBLEMS
+============================================================
+
+Problem: HPA does not scale.
+
+Possible causes:
+
+- Metrics are unavailable.
+- Resource requests are not configured appropriately.
+- The metric target is incorrect.
+- Maximum replicas has already been reached.
+- The workload is not a scalable resource.
+- The observed metric does not represent the real workload.
+
+Problem: HPA scales too frequently.
+
+Possible causes:
+
+- Highly variable metrics.
+- Poorly chosen thresholds.
+- Insufficient stabilization.
+- Aggressive scaling policies.
+
+Problem: Queue keeps growing.
+
+Possible causes:
+
+- Too few workers.
+- Workers process requests too slowly.
+- Requests arrive faster than workers can process them.
+- Worker startup time is too long.
+- Maximum worker replicas has been reached.
+- The inference model is computationally expensive.
+
+Problem: Scaling happens but latency remains high.
+
+Possible causes:
+
+- New Pods are slow to start.
+- Models take a long time to load.
+- Infrastructure is CPU or memory constrained.
+- Requests are still queued.
+- Model inference itself is the bottleneck.
+
+
+============================================================
+45. RESOURCE-BASED VS EVENT-DRIVEN SCALING
+============================================================
+
+Resource-based scaling:
+
+Question:
+"How much infrastructure resource is currently being consumed?"
+
+Typical signals:
+
+CPU
+Memory
+
+Example:
+
+API CPU increases
+-> HPA increases API replicas
+
+Event-driven scaling:
+
+Question:
+"How much work is waiting or arriving?"
+
+Typical signals:
+
+Queue length
+Messages
+Events
+External workload measurements
+
+Example:
+
+Redis queue grows
+-> KEDA increases inference worker capacity
+
+Both approaches can be useful at the same time.
+
+
+============================================================
+46. HYBRID SCALING IN THIS PROJECT
+============================================================
+
+The central idea of this project's autoscaling design is:
+
+Use HPA where resource utilization represents workload pressure.
+
+Use KEDA where queued inference work represents workload pressure.
+
+Therefore:
+
+API layer
+    |
+    +-- CPU/resource utilization
+    |
+    +-- HPA
+    |
+    +-- API replicas
+
+Inference layer
+    |
+    +-- Redis queue length
+    |
+    +-- KEDA
+    |
+    +-- Inference worker replicas
+
+This allows the two layers to react independently.
+
+
+============================================================
+47. END-TO-END HYBRID SCALING EXAMPLE
+============================================================
+
+Consider a sudden burst of 100 inference requests.
+
+Step 1:
+Users send requests.
+
+Step 2:
+The API receives the requests.
+
+Step 3:
+The API places inference work into Redis.
+
+Step 4:
+The Redis queue grows.
+
+Step 5:
+KEDA observes the event-driven workload.
+
+Step 6:
+KEDA provides scaling information to Kubernetes/HPA.
+
+Step 7:
+The inference worker Deployment is scaled.
+
+Step 8:
+New workers become ready.
+
+Step 9:
+Workers consume requests from Redis.
+
+Step 10:
+The queue starts shrinking.
+
+Step 11:
+As demand decreases, fewer workers may be required.
+
+Step 12:
+The worker layer scales down according to its configured behavior.
+
+At the same time, if the API layer experiences sustained CPU pressure, HPA can independently scale API Pods.
+
+This demonstrates why the architecture is hybrid.
+
+
+============================================================
+48. KEY TERMINOLOGY
+============================================================
+
+Autoscaling:
+Automatically adjusting capacity based on workload demand.
+
+Horizontal scaling:
+Changing the number of application instances.
+
+Vertical scaling:
+Changing CPU or memory resources assigned to instances.
+
+Scale-out:
+Increasing the number of replicas.
+
+Scale-in:
+Decreasing the number of replicas.
+
+Pod:
+Kubernetes execution unit.
+
+Deployment:
+Kubernetes workload resource that manages replicated Pods.
+
+Replica:
+One running instance of a workload.
+
+HPA:
+Kubernetes Horizontal Pod Autoscaler.
+
+KEDA:
+Kubernetes Event-driven Autoscaling.
+
+Metric:
+A measured value used to make scaling decisions.
+
+Resource metric:
+A metric such as CPU or memory utilization.
+
+Custom metric:
+An application-specific metric used for scaling.
+
+External metric:
+A metric obtained from an external source.
+
+Queue:
+A structure that stores pending work.
+
+Producer:
+Component that adds work to a queue.
+
+Consumer:
+Component that retrieves work from a queue.
+
+Queue depth:
+The amount of pending work in a queue.
+
+Backlog:
+Accumulated work that has not yet been processed.
+
+Worker:
+Component that processes queued work.
+
+Scale-up:
+Increasing capacity.
+
+Scale-down:
+Decreasing capacity.
+
+Cold start:
+The delay associated with starting a new processing instance and making it ready.
+
+
+============================================================
+49. FINAL SUMMARY
+============================================================
+
+Autoscaling allows Kubernetes applications to adapt capacity to changing workload demand.
+
+Horizontal scaling increases or decreases the number of Pods.
+
+Kubernetes HPA provides horizontal autoscaling based on observed metrics such as CPU, memory, custom metrics, and external metrics.
+
+HPA operates as a feedback control loop.
+
+It periodically observes metrics, compares them with desired targets, calculates a desired replica count, and updates the workload.
+
+Minimum and maximum replica settings limit the scaling range.
+
+Scaling behavior and stabilization help prevent excessive replica fluctuations.
+
+KEDA provides event-driven autoscaling capabilities.
+
+KEDA can monitor external event sources and provide metrics that Kubernetes HPA uses to drive scaling.
+
+Queue length is a useful workload signal for systems where pending work is more meaningful than CPU utilization.
+
+Redis can act as a request queue between an API layer and inference workers.
+
+The API can act as a producer.
+
+Inference workers can act as consumers.
+
+A growing queue can indicate that additional worker capacity is needed.
+
+A shrinking queue can indicate that less worker capacity is required.
+
+LLM inference workloads can benefit from queue-based architectures because model inference may be expensive and requests may arrive in bursts.
+
+Separating the API layer from the inference worker layer allows each layer to scale independently.
+
+The project-specific hybrid architecture is:
+
+User
+-> API
+-> Redis Queue
+-> Inference Worker
+-> Ollama
+-> Code Llama
+-> Response
+
+The intended scaling responsibilities are:
+
+API
+-> HPA
+-> CPU/resource utilization
+
+Inference workers
+-> KEDA
+-> Redis request queue
+
+The fundamental principle is:
+
+Use the scaling signal that best represents the workload of each component.
+
+For the API layer, resource utilization can represent demand.
+
+For the inference worker layer, pending queued requests can represent demand.
+
+A hybrid approach therefore allows the architecture to respond to both sustained computational load and sudden bursts of inference work.
+
+Autoscaling improves elasticity, but it does not remove infrastructure limits or model inference costs.
+
+For LLM workloads, model loading time, memory requirements, CPU/GPU availability, worker startup time, queue depth, and maximum replica limits must all be considered when designing an effective autoscaling system.

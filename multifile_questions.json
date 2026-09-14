@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "question": "Trace the complete flow of a user question through app.py, retrieval_service.py, retrieve.py, inference_service.py, and Ollama. Explain what each component does."
+  },
+  {
+    "id": 2,
+    "question": "How does app.py obtain retrieved context before calling the inference service? Identify the relevant endpoint, function/module, and service ports involved."
+  },
+  {
+    "id": 3,
+    "question": "Explain how retrieve.py and create_embeddings.py work together. What is created by create_embeddings.py and how is it later used by retrieve.py?"
+  },
+  {
+    "id": 4,
+    "question": "If the retrieval service port changes, which file needs to be updated on the client side and what configuration value must change? Explain why."
+  },
+  {
+    "id": 5,
+    "question": "Compare the responsibilities of retrieval_service.py and inference_service.py. How do these two services work together in the Week 3 application?"
+  }
+]

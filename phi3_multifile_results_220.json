@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "question": "Trace the complete flow of a user question through app.py, retrieval_service.py, retrieve.py, inference_service.py, and Ollama. Explain what each component does.",
+    "answer": "The user question flows through the services as follows:\n\n1. The user enters a question into the `ask` endpoint of `app.py`. This FastAPI application serves as the entry point for the user's query.\n\n2. The `ask` endpoint in `app.py` calls the `ask_services` endpoint in `ask_services.py`. This is a separate FastAPI application that provides an interface for the retrieval and inference services.\n\n3. The `ask_services` endpoint in `ask_services.py` makes a GET request to the `retrieve` endpoint in `retrieve_service.py`. This retrieval service is responsible for fetching the most relevant document based on the user's question.\n\n4. The `retrieve` endpoint in `retrieve_service.py` invokes the `retrieve` function, which uses the `TextEmbedding` model to calculate the similarity between the user's question and the documents in the knowledge base. It then",
+    "eval_count": 220,
+    "prompt_eval_count": 2424,
+    "total_duration": 254142765134
+  },
+  {
+    "id": 2,
+    "question": "How does app.py obtain retrieved context before calling the inference service? Identify the relevant endpoint, function/module, and service ports involved.",
+    "answer": "The `app.py` obtains retrieved context before calling the inference service by first calling the `/ask-services` endpoint of the Retrieval Service. This endpoint is defined in `app.py` as follows:\n\n```python\n@app.get(\"/ask-services\")\ndef ask_services(question: str):\n    retrieval_response = requests.get(\n        RETRIEVAL_SERVICE_URL,\n        params={\"query\": question},\n        timeout=60\n    ).json()\n\n    context = retrieval_response[\"context\"]\n\n    prompt = f\"\"\"Use this context to answer the question.\n\nContext:\n{context[:2000]}\n\nQuestion:\n{question}\n\nAnswer briefly and only using the context.\"\"\"\n\n    inference_response = requests.get(\n        INFERENCE_SERVICE_URL,\n        params={\"prompt\": prompt},\n        timeout=180\n    ).json()\n\n   ",
+    "eval_count": 220,
+    "prompt_eval_count": 2411,
+    "total_duration": 116483429301
+  },
+  {
+    "id": 3,
+    "question": "Explain how retrieve.py and create_embeddings.py work together. What is created by create_embeddings.py and how is it later used by retrieve.py?",
+    "answer": "`retrieve.py` and `create_embeddings.py` work together to provide a retrieval service that uses precomputed text embeddings to find the most relevant document for a given query.\n\n`create_embeddings.py` performs the following tasks:\n\n1. It defines a chunk size for processing the text.\n2. It reads the source text file, which contains the documents to be embedded.\n3. It splits the text into chunks to be processed separately.\n4. It initializes a `TextEmbedding` model with a specified pre-trained model.\n5. It iterates over each chunk of text, embedding the text using the initialized model.\n6. It appends the filename and the corresponding embedding to lists.\n7. It creates a dictionary with two keys, \"documents\" and \"embeddings\", where \"documents\" is a list of dictionaries containing the filename and text, and \"embeddings\" is a list of the corresponding embedds",
+    "eval_count": 220,
+    "prompt_eval_count": 2421,
+    "total_duration": 70943422139
+  },
+  {
+    "id": 4,
+    "question": "If the retrieval service port changes, which file needs to be updated on the client side and what configuration value must change? Explain why.",
+    "answer": "If the retrieval service port changes, the client side code needs to be updated to reflect the new port number. Specifically, the `RETRIEVAL_SERVICE_URL` in the client code should be updated to the new port number. For example, if the new port number is `8002`, the `RETRIEVAL_SERVICE_URL` should be updated to `\"http://localhost:8002/retrieve\"`.\n\nThis change is necessary because the client code uses the `RETRIEVAL_SERVICE_URL` to make a request to the retrieval service. If the port number changes, the client code needs to use the new port number to reach the service. Failing to update the port number in the client code would result in the client code being unable to connect to the retrieval service, leading to errors.\n\nIn summary, the file that needs to be updated on the client side is the code file that contains the `RETRIEVAL_SERVICE_URL` constant",
+    "eval_count": 220,
+    "prompt_eval_count": 2411,
+    "total_duration": 65901026430
+  },
+  {
+    "id": 5,
+    "question": "Compare the responsibilities of retrieval_service.py and inference_service.py. How do these two services work together in the Week 3 application?",
+    "answer": "The `retrieval_service.py` and `inference_service.py` play distinct but complementary roles in the Week 3 application, which is designed to assist users in answering questions using a hybrid LLM Inference Assistant.\n\nThe `retrieval_service.py` is responsible for retrieving relevant documents from a knowledge base based on a user's query. When a question is posed, the `retrieve_endpoint` function in `retrieval_service.py` is called, which uses a pre-trained embedding model to convert the query into a vector representation. It then calculates the similarity between the query vector and the document embeddings in the knowledge base. The document with the highest similarity score is selected as the most relevant source document for the user's question. This service provides the initial context needed for the user to understand the topic of their question.\n\nOn the other hand, the `inference_service.py` is responsible for generating an answer to the user's question using",
+    "eval_count": 220,
+    "prompt_eval_count": 2416,
+    "total_duration": 67749246393
+  }
+]

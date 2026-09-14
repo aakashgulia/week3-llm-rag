@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "question": "Trace the complete flow of a user question through app.py, retrieval_service.py, retrieve.py, inference_service.py, and Ollama. Explain what each component does.",
+    "answer": "\n\nfrom fastapi import FastAPI\nimport json\nfrom pathlib import Path\n\nimport numpy as np\nimport requests\nfrom fastembed import TextEmbedding\n\napp = FastAPI(title=\"Hybrid LLM Inference Assistant\")\n\nOLLAMA_URL = \"http://localhost:11434/api/generate\"\nRETRIEVAL_SERVICE_URL = \"http://localhost:8001/retrieve\"\nINFERENCE_SERVICE_URL = \"http://localhost:8002/generate\"\nEMBEDDINGS_FILE = Path(\"knowledge_base/embeddings.json\")\n\ndata = json.loads(\n    EMBEDDINGS_FILE.read_text(encoding=\"utf-8\")\n)\n\ndocuments = data[\"documents\"]\ndocument_embeddings = np.array(\n    data[\"embeddings\"],\n    dtype=np.float32\n)\n\nembedding_model = TextEmbedding(\n    model_name=\"BAAI/bge-small-en-v1",
+    "eval_count": 220,
+    "prompt_eval_count": 2160,
+    "total_duration": 149540471361
+  },
+  {
+    "id": 2,
+    "question": "How does app.py obtain retrieved context before calling the inference service? Identify the relevant endpoint, function/module, and service ports involved.",
+    "answer": "\n\nfrom fastapi import FastAPI\nimport requests\n\napp  = FastAPI(title=\"Hybrid LLM Inference Assistant\")\n\nRETRIEVAL_SERVICE_URL  = \"http://localhost:8001/retrieve\"\nINFERENCE_SERVICE_URL  = \"http://localhost:8002/generate\"\n\n@app.get(\"/ask\")\ndef ask(question: str):\n    response  = requests.get(\n        RETRIEVAL_SERVICE_URL,\n        params={\"query\": question},\n        timeout=60\n     ).json()\n\n    context  = response[\"context\"]\n\n    prompt  = f\"\"\"Use this context to answer the question.\n\nContext:\n{context[:2000]}\n\nQuestion:\n{question}\n\nAnswer briefly and only using the context.\"\"\"\n\n    response  = requests.get(\n        INFERENCE_SERVICE_URL,\n        params={\"prompt\": prompt},\n        timeout=180\n     ).json()\n\n    return  {\n         \"question\": question",
+    "eval_count": 220,
+    "prompt_eval_count": 2148,
+    "total_duration": 37914941686
+  },
+  {
+    "id": 3,
+    "question": "Explain how retrieve.py and create_embeddings.py work together. What is created by create_embeddings.py and how is it later used by retrieve.py?",
+    "answer": "\n\nThe retrieve.py script is used to retrieve relevant context from the knowledge base. It uses the knowledge base embeddings to compute the cosine similarity between the query and the document embeddings. The highest scoring document is then used as the context for the question.\n\nThe create_embeddings.py script is used to create the knowledge base embeddings. It uses the fastembed library to embed the knowledge base documents. The resulting embeddings are then saved to a JSON file.\n\nThe retrieve.py script is used to retrieve relevant context from the knowledge base. It uses the knowledge base embeddings to compute the cosine similarity between the query and the document embeddings. The highest scoring document is then used as the context for the question.\n\nThe create_embeddings.py script is used to create the knowledge base embeddings. It uses the fastembed library to embed the knowledge base documents. The resulting embeddings are then saved to a JSON file.\n\nThe retrieve.py script is used to retrieve relevant context from the knowledge base. It uses the knowledge base embeddings to compute the cosine similarity between the",
+    "eval_count": 220,
+    "prompt_eval_count": 2153,
+    "total_duration": 42565445642
+  },
+  {
+    "id": 4,
+    "question": "If the retrieval service port changes, which file needs to be updated on the client side and what configuration value must change? Explain why.",
+    "answer": "\n\nThe retrieval service port changes, which file needs to be updated on the client side and what configuration value must change? Explain why.\n\nANSWER:\n\nThe retrieval service port changes, which file needs to be updated on the client side and what configuration value must change? Explain why.\n\nANSWER:\n\nThe retrieval service port changes, which file needs to be updated on the client side and what configuration value must change? Explain why.\n\nANSWER:\n\nThe retrieval service port changes, which file needs to be updated on the client side and what configuration value must change? Explain why.\n\nANSWER:\n\nThe retrieval service port changes, which file needs to be updated on the client side and what configuration value must change? Explain why.\n\nANSWER:\n\nThe retrieval service port changes, which file needs to be updated on the client side and what configuration value must change? Explain why.\n\nANSWER:\n\nThe retrieval service port changes, which file",
+    "eval_count": 220,
+    "prompt_eval_count": 2147,
+    "total_duration": 48865425409
+  },
+  {
+    "id": 5,
+    "question": "Compare the responsibilities of retrieval_service.py and inference_service.py. How do these two services work together in the Week 3 application?",
+    "answer": "\n\nThe retrieval service is responsible for retrieving relevant context from the knowledge base. The inference service is responsible for answering the question using the retrieved context.\n\nThe retrieval service is a REST API that accepts a question as input and returns the relevant context. The inference service is a REST API that accepts the retrieved context as input and returns the answer.\n\nThe retrieval service is a REST API that accepts a question as input and returns the relevant context. The inference service is a REST API that accepts the retrieved context as input and returns the answer.\n\nThe retrieval service is a REST API that accepts a question as input and returns the relevant context. The inference service is a REST API that accepts the retrieved context as input and returns the answer.\n\nThe retrieval service is a REST API that accepts a question as input and returns the relevant context. The inference service is a REST API that accepts the retrieved context as input and returns the answer.\n\nThe retrieval service is a REST API that accepts a question as input and returns the relevant context. The inference service is a REST API that",
+    "eval_count": 220,
+    "prompt_eval_count": 2150,
+    "total_duration": 93942109795
+  }
+]
