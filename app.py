@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from pathlib import Path
 import json
@@ -11,6 +12,14 @@ from fastembed import TextEmbedding
 
 
 app = FastAPI(title="Hybrid LLM Inference Assistant")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # =========================================================
@@ -293,3 +302,4 @@ A concise and accurate answer based on the context is:"""
         generate_stream(),
         media_type="text/plain"
     )
+

@@ -45,7 +45,7 @@ def generate(prompt: str, model: str = "codellama:7b-instruct"):
             "stream": True,
             "keep_alive": -1,
             "options": {
-                "num_predict": 30,
+                "num_predict": 60,
                 "temperature": 0
             }
         },

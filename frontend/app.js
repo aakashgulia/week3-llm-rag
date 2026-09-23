@@ -1,4 +1,4 @@
-const API_URL = "/ask-services";
+const API_URL = "http://127.0.0.1:8501/ask-services";
 const SYSTEM_STATS_URL = "/system-stats";
 const MODEL_STATUS_URL = "/model-status";
 
